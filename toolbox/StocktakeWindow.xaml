@@ -1,0 +1,159 @@
+<Window x:Class="toolbox.StocktakeWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:m="clr-namespace:toolbox.Models"
+        Title="盤點" Width="820" Height="700" MinWidth="680" MinHeight="460" ShowInTaskbar="False"
+        WindowStartupLocation="CenterOwner"
+        Icon="Assets/app.ico"
+        Background="{DynamicResource AppBgBrush}"
+        FontFamily="{StaticResource UiFont}"
+        Foreground="{DynamicResource TextBrush}"
+        UseLayoutRounding="True">
+    <!-- 盤點：逐項填上實際點到的數量；空白的表示還沒點，不會更動 -->
+    <Window.Resources>
+        <Style x:Key="Card" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource CardBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="16"/>
+            <Setter Property="Padding" Value="8,8,4,8"/>
+        </Style>
+
+        <!-- 差異徽章：未點灰色、相符綠色、多點到主色、少了琥珀色、填錯紅色 -->
+        <Style x:Key="DiffBadge" TargetType="Border">
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="0,4"/>
+            <Setter Property="Width" Value="76"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Background" Value="{DynamicResource InputBgBrush}"/>
+            <Setter Property="TextElement.Foreground" Value="{DynamicResource MutedBrush}"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding State}" Value="{x:Static m:StocktakeState.Match}">
+                    <Setter Property="Background" Value="{DynamicResource SuccessSoftBrush}"/>
+                    <Setter Property="TextElement.Foreground" Value="{DynamicResource SuccessBrush}"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding State}" Value="{x:Static m:StocktakeState.More}">
+                    <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}"/>
+                    <Setter Property="TextElement.Foreground" Value="{DynamicResource AccentBrush}"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding State}" Value="{x:Static m:StocktakeState.Less}">
+                    <Setter Property="Background" Value="{DynamicResource WarnSoftBrush}"/>
+                    <Setter Property="TextElement.Foreground" Value="{DynamicResource WarnBrush}"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding State}" Value="{x:Static m:StocktakeState.Invalid}">
+                    <Setter Property="Background" Value="{DynamicResource DangerSoftBrush}"/>
+                    <Setter Property="TextElement.Foreground" Value="{DynamicResource DangerBrush}"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="22,16,22,16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- 盤點日期 + 搜尋 -->
+        <DockPanel Margin="0,0,0,10">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <TextBlock Text="盤點日期" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                <Grid Width="170">
+                    <TextBox x:Name="DateBox" Padding="12,8,52,8" TextChanged="DateBox_TextChanged"/>
+                    <Button Content="今天" Style="{StaticResource GhostButton}" Padding="6,3" FontSize="12" HorizontalAlignment="Right"
+                            VerticalAlignment="Center" Margin="0,0,4,0" ToolTip="填入今天的日期" Click="Today_Click"/>
+                </Grid>
+            </StackPanel>
+            <Grid Width="240" HorizontalAlignment="Right">
+                <TextBox x:Name="SearchBox" Padding="34,8,12,8" TextChanged="SearchBox_TextChanged"/>
+                <TextBlock Text="&#xE721;" Style="{StaticResource Icon}" Foreground="{DynamicResource SubtleBrush}"
+                           Margin="12,0,0,0" IsHitTestVisible="False"/>
+                <TextBlock Text="搜尋名稱、規格" Margin="35,0,0,0" FontSize="13" VerticalAlignment="Center" IsHitTestVisible="False">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Foreground" Value="{DynamicResource SubtleBrush}"/>
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding Text, ElementName=SearchBox}" Value="">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+            </Grid>
+        </DockPanel>
+
+        <TextBlock x:Name="ScopeText" Grid.Row="1" FontSize="12" Foreground="{DynamicResource MutedBrush}" Margin="2,0,0,10"
+                   TextWrapping="Wrap"/>
+
+        <Border Grid.Row="2" Style="{StaticResource Card}">
+            <Grid>
+                <ScrollViewer x:Name="Scroller" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <ItemsControl x:Name="RowList" KeyboardNavigation.TabNavigation="Continue" Focusable="False">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border x:Name="RowBorder" CornerRadius="12" Padding="12,8" Margin="0,0,4,2" Background="Transparent">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel VerticalAlignment="Center" Margin="0,0,12,0">
+                                            <TextBlock Text="{Binding ItemDisplay, Mode=OneWay}" FontSize="14" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Text="{Binding Detail, Mode=OneWay}" FontSize="12" Foreground="{DynamicResource MutedBrush}"
+                                                       TextTrimming="CharacterEllipsis" Margin="0,2,0,0"/>
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,14,0" MinWidth="70">
+                                            <TextBlock Text="帳面" FontSize="11" Foreground="{DynamicResource SubtleBrush}" HorizontalAlignment="Right"/>
+                                            <TextBlock Text="{Binding BookDisplay, Mode=OneWay}" FontSize="14" FontWeight="SemiBold" HorizontalAlignment="Right"/>
+                                        </StackPanel>
+                                        <TextBox Grid.Column="2" Width="90" VerticalAlignment="Center" Margin="0,0,10,0" TextAlignment="Right"
+                                                 ToolTip="實際點到的數量（空白表示還沒點）" PreviewKeyDown="CountBox_PreviewKeyDown"
+                                                 GotKeyboardFocus="CountBox_GotKeyboardFocus"
+                                                 Text="{Binding CountText, UpdateSourceTrigger=PropertyChanged}"/>
+                                        <Border Grid.Column="3" Style="{StaticResource DiffBadge}">
+                                            <TextBlock Text="{Binding DiffDisplay, Mode=OneWay}" FontSize="12" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                                        </Border>
+                                    </Grid>
+                                </Border>
+                                <DataTemplate.Triggers>
+                                    <Trigger SourceName="RowBorder" Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="RowBorder" Property="Background" Value="{DynamicResource HoverBrush}"/>
+                                    </Trigger>
+                                </DataTemplate.Triggers>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+                <TextBlock x:Name="EmptyText" HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center"
+                           Foreground="{DynamicResource MutedBrush}" IsHitTestVisible="False" Visibility="Collapsed"/>
+            </Grid>
+        </Border>
+
+        <DockPanel Grid.Row="3" Margin="4,12,0,0">
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                <Button Margin="0,0,8,0" Padding="12,8" FontSize="13" Click="FillBook_Click" AutomationProperties.Name="未點的照帳面"
+                        ToolTip="還沒點的（含搜尋時看不到的）全部填上帳面數量，當作相符">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE8FB;" Style="{StaticResource Icon}" FontSize="12" Margin="0,0,6,0"/>
+                        <TextBlock Text="未點的照帳面"/>
+                    </StackPanel>
+                </Button>
+                <Button IsCancel="True" MinWidth="88" Margin="0,0,8,0" Content="取消"/>
+                <Button Style="{StaticResource PrimaryButton}" MinWidth="110" Click="Finish_Click" AutomationProperties.Name="完成盤點">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE73E;" Style="{StaticResource Icon}" FontSize="12" Margin="0,0,6,0"/>
+                        <TextBlock Text="完成盤點"/>
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+            <TextBlock x:Name="SummaryText" FontSize="12" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center"
+                       TextTrimming="CharacterEllipsis"/>
+        </DockPanel>
+    </Grid>
+</Window>
