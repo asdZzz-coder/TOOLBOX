@@ -135,7 +135,7 @@ namespace toolbox
         private async Task CheckForUpdateAsync(bool manual)
         {
             const string title = "檢查更新";
-            if (!_updater.IsInstalled)
+            if (!_updater.IsRelease)
             {
                 if (manual)
                     MessageBox.Show("目前是開發版（非安裝版），無法線上更新。", title);
@@ -148,6 +148,15 @@ namespace toolbox
                 if (info == null)
                 {
                     if (manual) MessageBox.Show($"目前已是最新版本（{_updater.CurrentVersion}）。", title);
+                    return;
+                }
+
+                // 從 APP 啟動器開的：新版由啟動器下載，這裡只提醒（啟動時的自動檢查不打擾，啟動器自己會標示可更新）
+                if (!_updater.IsInstalled)
+                {
+                    if (manual)
+                        MessageBox.Show($"發現新版本 {info.Version}（目前 {_updater.CurrentVersion}）。\n\n請到「APP 啟動器」按「更新到 v{info.Version}」，更新後從啟動器開啟新版。",
+                            "有新版本", MessageBoxButton.OK, MessageBoxImage.Information);
                     return;
                 }
 
@@ -847,7 +856,7 @@ namespace toolbox
         private void UpdateStatus()
         {
             // 視窗標題列顯示版本：安裝版為「工具盤點 v1.0.1」，直接從 Visual Studio 執行則標示開發版
-            Title = _updater.IsInstalled ? $"{AppTitle} v{_updater.CurrentVersion}" : $"{AppTitle}（開發版）";
+            Title = _updater.IsRelease ? $"{AppTitle} v{_updater.CurrentVersion}" : $"{AppTitle}（開發版）";
             int active = _items.Count(CategoryFilter.All.Matches);
             int scrapped = _items.Count - active;
             int loans = _loans.Count(l => l.IsOpen);
